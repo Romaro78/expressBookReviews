@@ -86,13 +86,6 @@ public_users.get('/title/:title', function (req, res) {
 //  Get book review
 public_users.get('/review/:isbn', function (req, res) {
   const isbn = req.params.isbn; // Retrieve ISBN from request parameters
-  const book = books[isbn];    // Access the book data using the ISBN key
-
-  if (book) {
-    return res.status(200).json(book.reviews); // Return the reviews if the book exists
-  } else {
-    return res.status(404).json({ message: "Book not found" }); // Return an error if ISBN does not exist
-  }
+  res.send(books[isbn].review);
 });
-
 module.exports.general = public_users;
