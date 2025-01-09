@@ -11,19 +11,19 @@ const isValid = (username) => {
 });
 // Return true if any user with the same username
 if (userswithsamename.length > 0) {
-    return true;
-} else {
     return false;
-}
+  } else {
+    return true;
+  }
 }
 
 const authenticatedUser = (username, password) => {
   let validusers = users.filter((user) => {
-    return (user.username === username && user.password === password);
-});
+    return (user.username === username & user.password === password);
+})
 return validusers.length > 0;
 };
-// Register a new user
+/*Register a new user
 regd_users.post('/register', (req, res) => {
   const { username, password } = req.body;
 
@@ -40,35 +40,45 @@ regd_users.post('/register', (req, res) => {
 users.push({ username, password });
 
 return res.status(201).json({ message: "User registered successfully!" });
-});
+});*/
 //only registered users can login
 regd_users.post('/login', (req, res) => {
-  const { username, password } = req.body;
+	let username = req.body.username;
+	let password = req.body.password;
+  
 // Validate input
 if (!username || !password) {
   return res.status(400).json({ message: "Username and password are required." });
 }
 
 // Check if the user exists and password matches
-if (!authenticatedUser(username, password)) {
-  return res.status(401).json({ message: "Invalid username or password." });
-}
-
-// Generate a JWT token
-const accessToken = jwt.sign({ username }, "your_secret_key", { expiresIn: '1h' });
-
-// Save the token in the session
-req.session.token = accessToken;
-
-return res.status(200).json({ message: "Login successful!", token: accessToken });
-});
+if (authenticatedUser(username, password)) {
+	let accessToken = jwt.sign(
+		{data : password},
+		'access',
+		//expires in a day. 60 secs x 60 times = 1hr
+		{expiresIn : 60 * 60});
+	  
+	  req.session.authorization = {
+		accessToken, username
+	  }
+  
+	console.log("Access Token:", accessToken);
+  
+	console.log("this is req.session.authorization \n", req.session.authorization)
+	  return res.status(200).send(`User ${username} successfully logged in`)
+	}
+	else{
+	  return res.status(500).json({message: "Invalid Login. Username and Password not recognized."});
+	}
+  });
 
 // Add a book review
 regd_users.put('/auth/review/:isbn', (req, res) => {
   // Code for adding reviews
   const isbn = req.params.isbn;
 	const userReview = req.query.review;
-	const username = req.session.authorization.username;
+	const username = req.session.authorization?.username;
 
 	if (!username) {
 		res
@@ -90,33 +100,27 @@ regd_users.put('/auth/review/:isbn', (req, res) => {
 		`Your review for the book ISBN ${isbn} has been added`
 	);
 });
-
+//The code for deleting a book review
 regd_users.delete('/auth/review/:isbn', (req, res) => {
 	const isbn = req.params.isbn;
 	const username = req.session.authorization.username;
 
-	if (!username) {
-		res
-			.status(401)
-			.send('login to delete review');
-	}
+	const bookreview = books[isbn].reviews[username]
+  //check the book review exists
+  if (bookreview) {
+    console.log(`the current user is ${username} `)
+    console.log(`here we can see the book review ${bookreview}`)
 
-	if (!books[isbn]) {
-		res
-			.status(404)
-			.send(
-				'Book not found'
-			);
-	}
-
-	if (books[isbn].reviews[username]) {
-		delete books[isbn].reviews[username];
-		res.send(
-			`Your review for book ${isbn} has been deleted.`
-		);
-	} else {
-		res.status(404).send('no review added');
-	}
+    Object.keys(books[isbn].reviews).forEach(key => {
+      if (key === username) {
+        delete books[isbn].reviews[key];
+        return res.status(200).send(`Book review by ${username}, isbn ${isbn} was deleted successfully`)
+      }
+    })
+  }
+  else{
+    return res.status(400).send('The book review was not found')
+  }
 });
 
 module.exports.authenticated = regd_users;
